@@ -16,7 +16,6 @@ function getParameters() {
 }
 
 function sliceString(string, sliceLength, index) {
-	
 	var beginPos = index*sliceLength;
 	var endPos = beginPos + sliceLength;
 	var slice;
@@ -32,21 +31,33 @@ function sliceString(string, sliceLength, index) {
 	return slice;
 }
 
+var SLICE_LENGTH = 40;
+function buildSliceArray(messsage) {
+	var slices = [];
+	for(var i = 0; i++;) {
+		var slice = sliceString(message, SLICE_LENGTH, i);
+		if (slice.length != SLICE_LENGTH) {
+			slices.push(slice);
+			break;
+		}
+	}
+	return slices;
+}
 
 function sendMessage(message, client, pauseBetweenSlices, callback) {
-	var sliceIndex = 0;
-	var sliceLength = 40;
-	var sendNextSlice = function() {
-		var slice = sliceString(message, sliceLength, sliceIndex);
-		sliceIndex++;
+	var slices = buildSliceArray(message);
+	
+	var sendNextSlice = function(slice, sendSliceCallback) {
 		client.write(slice);
-		if (slice.length == sliceLength) {
-			setTimeout(sendNextSlice, pauseBetweenSlices);
-		} else {
-			callback();
-		}
+		setTimeout(function() {
+			sendSliceCallback();
+		}, pauseBetweenSlices);
+		
 	};
-	sendNextSlice();
+
+	async.forEachSeries(slices, sendNextSlice, function() {
+		callback();
+	});
 }
 
 function connectSocket(onConnect) {
