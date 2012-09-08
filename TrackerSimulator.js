@@ -1,4 +1,6 @@
 var net = require('net');
+var async = require('async');
+
 function getParameters() {
 	
 	var args = process.argv.slice(2);
@@ -61,24 +63,27 @@ function connectSocket(onConnect) {
 }
 
 module.exports = function(messages, pauseBetweenMessages, pauseBetweenSlices, callback) {	
+	
+	var onConnect = function(client) {
+		
+		var sendNextMessage = function(message, sendMessageCallback) {
+			
+			sendMessage(message, client, pauseBetweenSlices, function() {
+				setTimeout(function() {
+					sendMessageCallback();
+				}, pauseBetweenMessages);
+			});
+		};
 
-		var onConnect = function(client) {
-			var messageIndex = 0;
-		    	
-			var sendNextMessage = function() {
-				if (messageIndex < messages.length) {
-					sendMessage(messages[messageIndex], client, pauseBetweenSlices, function() {
-						setTimeout(sendNextMessage, pauseBetweenMessages);
-					});
-					messageIndex++;
-				} else {
-					client.destroy();
-					callback();
-				}
-			};
-			sendNextMessage();
+		var onFinished = function() {
+			client.destroy();
+			callback();
 		};
 		
-		connectSocket(onConnect);
+		async.forEachSeries(messages, sendNextMessage, onFinished);
+		
 	};
+	
+	connectSocket(onConnect);
+};
 	
