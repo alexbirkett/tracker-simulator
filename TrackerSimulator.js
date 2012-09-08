@@ -1,5 +1,4 @@
 var net = require('net');
-
 function getParameters() {
 	
 	var args = process.argv.slice(2);
@@ -38,7 +37,6 @@ function sendMessage(message, client, pauseBetweenSlices, callback) {
 	var sendNextSlice = function() {
 		var slice = sliceString(message, sliceLength, sliceIndex);
 		sliceIndex++;
-		//console.log('sending ' + slice);
 		client.write(slice);
 		if (slice.length == sliceLength) {
 			setTimeout(sendNextSlice, pauseBetweenSlices);
@@ -49,32 +47,38 @@ function sendMessage(message, client, pauseBetweenSlices, callback) {
 	sendNextSlice();
 }
 
-module.exports = function(messages, pauseBetweenMessages, pauseBetweenSlices, callback) {
+function connectSocket(onConnect) {
 	var params = getParameters();
 	
 	var client = net.createConnection(params.port, params.hostname);
-
-	client.addListener("connect", function(){
-		
-		var messageIndex = 0;
-	    
-		var sendNextMessage = function() {
-			if (messageIndex < messages.length) {
-				sendMessage(messages[messageIndex], client, pauseBetweenSlices, function() {
-					setTimeout(sendNextMessage, pauseBetweenMessages);
-				});
-				messageIndex++;
-			} else {
-				//console.log('end');
-				client.destroy();
-				callback();
-			}
-		};
-
-		sendNextMessage();
+	client.addListener("connect", function() {
+		onConnect(client);
 	});
 	
 	client.addListener("error", function(err) {
 		console.log(err);
 	});
-};
+}
+
+module.exports = function(messages, pauseBetweenMessages, pauseBetweenSlices, callback) {	
+
+		var onConnect = function(client) {
+			var messageIndex = 0;
+		    	
+			var sendNextMessage = function() {
+				if (messageIndex < messages.length) {
+					sendMessage(messages[messageIndex], client, pauseBetweenSlices, function() {
+						setTimeout(sendNextMessage, pauseBetweenMessages);
+					});
+					messageIndex++;
+				} else {
+					client.destroy();
+					callback();
+				}
+			};
+			sendNextMessage();
+		};
+		
+		connectSocket(onConnect);
+	};
+	
