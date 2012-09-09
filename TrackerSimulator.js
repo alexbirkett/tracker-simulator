@@ -87,12 +87,17 @@ module.exports = function(messages, pauseBetweenMessages, pauseBetweenSlices, ca
 		};
 
 		var onFinished = function() {
-			client.destroy();
-			callback();
+			sendMessages();
+			//client.destroy();
+			//callback();
 		};
 		
-		async.forEachSeries(messages, sendNextMessage, onFinished);
-		
+		var sendMessages = function() {
+			async.forEachSeries(messages, sendNextMessage, onFinished);
+		}
+	
+		sendMessages();
+
 	};
 	
 	connectSocket(onConnect);
