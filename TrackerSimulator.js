@@ -1,20 +1,6 @@
 var net = require('net');
 var async = require('async');
 
-function getParameters() {
-	
-	var args = process.argv.slice(2);
-	if (args.length < 2) {
-		throw "usage <hostname> <port>";
-	}
-	
-	var params = new Object();
-	
-	params.hostname = args[0];
-	params.port = args[1];
-	return params;
-}
-
 function sliceString(string, sliceLength, index) {
 	var beginPos = index*sliceLength;
 	var endPos = beginPos + sliceLength;
@@ -32,12 +18,12 @@ function sliceString(string, sliceLength, index) {
 }
 
 var SLICE_LENGTH = 40;
-function buildSliceArray(messsage) {
+function buildSliceArray(message) {
 	var slices = [];
-	for(var i = 0; i++;) {
+	for(var i = 0;true;i++) {
 		var slice = sliceString(message, SLICE_LENGTH, i);
+		slices.push(slice);
 		if (slice.length != SLICE_LENGTH) {
-			slices.push(slice);
 			break;
 		}
 	}
@@ -46,7 +32,6 @@ function buildSliceArray(messsage) {
 
 function sendMessage(message, client, pauseBetweenSlices, callback) {
 	var slices = buildSliceArray(message);
-	
 	var sendNextSlice = function(slice, sendSliceCallback) {
 		client.write(slice);
 		setTimeout(function() {
@@ -60,23 +45,18 @@ function sendMessage(message, client, pauseBetweenSlices, callback) {
 	});
 }
 
-function connectSocket(onConnect) {
-	var params = getParameters();
-	
-	var client = net.createConnection(params.port, params.hostname);
-	client.addListener("connect", function() {
-		onConnect(client);
-	});
-	
-	client.addListener("error", function(err) {
-		console.log(err);
-	});
+function createEvent(name) {
+	event = new Object();
+	event.name = name;
+	return event;
 }
 
-module.exports = function(messages, pauseBetweenMessages, pauseBetweenSlices, callback) {	
+module.exports = function(messages, pauseBetweenMessages, pauseBetweenSlices, connectOptions, callback) {	
+
+	var client = net.createConnection(connectOptions);
 	
-	var onConnect = function(client) {
-		
+	var onConnect = function() {
+		callback(createEvent("connected"));
 		var sendNextMessage = function(message, sendMessageCallback) {
 			
 			sendMessage(message, client, pauseBetweenSlices, function() {
@@ -88,18 +68,24 @@ module.exports = function(messages, pauseBetweenMessages, pauseBetweenSlices, ca
 
 		var onFinished = function() {
 			sendMessages();
-			//client.destroy();
-			//callback();
 		};
 		
 		var sendMessages = function() {
 			async.forEachSeries(messages, sendNextMessage, onFinished);
-		}
+		};
 	
 		sendMessages();
 
 	};
 	
-	connectSocket(onConnect);
+
+	client.addListener("connect", onConnect);
+	
+	client.addListener("error", function(err) {
+		var event = createEvent("error");
+		event.err = err;
+		callback(err);
+	});
+
 };
 	
