@@ -71,11 +71,5 @@ var showDebug = function() {
 };
 
 setInterval(showDebug, 1000);
-spawnConnections('10.0.0.31');
-spawnConnections('10.0.0.32');
-spawnConnections('10.0.0.33');
-spawnConnections('10.0.0.34');
-spawnConnections('10.0.0.35');
-spawnConnections('10.0.0.36');
-spawnConnections('10.0.0.37');
-spawnConnections('10.0.0.38');
+spawnConnections();
+
