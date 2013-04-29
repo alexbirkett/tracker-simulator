@@ -1,9 +1,12 @@
 var net = require('net');
 var async = require('async');
+var forEach = require('async-foreach').forEach;
+require('smarter-buffer');
 
 function sliceString(string, sliceLength, index) {
 	var beginPos = index*sliceLength;
 	var endPos = beginPos + sliceLength;
+	
 	var slice;
 	if (beginPos < string.length) {
 		if (endPos < string.length) {
@@ -12,26 +15,28 @@ function sliceString(string, sliceLength, index) {
 			slice = string.slice(beginPos);
 		}
 	} else {
-		throw "out of bounds";
+		throw "out of bounds sl " + sliceLength + ' beginPos ' + beginPos + ' ' + string;
 	}
 	return slice;
 }
 
-var SLICE_LENGTH = 40;
-function buildSliceArray(message) {
+function buildSliceArray(message, sliceLength) {
 	var slices = [];
-	for(var i = 0;true;i++) {
-		var slice = sliceString(message, SLICE_LENGTH, i);
+	for(var i = 0; true; i++) {
+		try {
+			var slice = sliceString(message, sliceLength, i);
 		slices.push(slice);
-		if (slice.length != SLICE_LENGTH) {
+		} catch(e) {
 			break;
 		}
 	}
 	return slices;
 }
 
-function sendMessage(message, client, pauseBetweenSlices, callback) {
-	var slices = buildSliceArray(message);
+
+
+function sendMessage(message, client, pauseBetweenSlices, sliceLength, callback) {	
+	var slices = buildSliceArray(message, sliceLength);
 	var sendNextSlice = function(slice, sendSliceCallback) {
 		client.write(slice);
 		setTimeout(function() {
@@ -45,47 +50,70 @@ function sendMessage(message, client, pauseBetweenSlices, callback) {
 	});
 }
 
-function createEvent(name) {
-	event = new Object();
-	event.name = name;
-	return event;
+
+var TrackerSimulator = function() {
 }
 
-module.exports = function(messages, pauseBetweenMessages, pauseBetweenSlices, connectOptions, callback) {	
+module.exports = TrackerSimulator;
+       
+TrackerSimulator.prototype.connect = function(connectOptions, callback) {
+	this.client = net.createConnection(connectOptions, callback);
+    var self = this;
+	this.client.on('data', function(data) {
+       self.buffer = Buffer.smarterConcat([self.buffer, data]); 
+       if (self.bytesCount && self.buffer.length >= self.bytesCount) {
+          callWaitForDataCallback(self);
+       }
+  
+    });
+}
 
-	var client = net.createConnection(connectOptions);
+function isArray(o) {
+      return Object.prototype.toString.call(o) === '[object Array]';
+}
+
+TrackerSimulator.prototype.sendMessage = function(messages, pauseBetweenMessages, pauseBetweenSlices, sliceLength, callback) {
+	var self = this;
+
+    if (!isArray(messages)) {
+        messages = [messages];
+    }
 	
-	var onConnect = function() {
-		callback(createEvent("connected"));
-		var sendNextMessage = function(message, sendMessageCallback) {
+	forEach(messages, function(message, index, arr) {
+		var done = this.async();
 			
-			sendMessage(message, client, pauseBetweenSlices, function() {
+		sendMessage(message, self.client, pauseBetweenSlices, sliceLength, function() {
 				setTimeout(function() {
-					sendMessageCallback();
+				done();
 				}, pauseBetweenMessages);
 			});
-		};
-
-		var onFinished = function() {
-			sendMessages();
-		};
-		
-		var sendMessages = function() {
-			async.forEachSeries(messages, sendNextMessage, onFinished);
-		};
 	
-		sendMessages();
 
+	}, function() {
+		callback();
+	});
 	};
 	
+var callWaitForDataCallback = function(self) {
+    var buffer = self.buffer;
+    self.buffer = undefined;
+    var callback = self.dataCallback;
+    self.callback = undefined;
+    callback(null, buffer); 
+}
 
-	client.addListener("connect", onConnect);
-	
-	client.addListener("error", function(err) {
-		var event = createEvent("error");
-		event.err = err;
-		callback(err);
+TrackerSimulator.prototype.waitForData = function(bytesCount, callback) {
+   var self = this;
+   self.dataCallback = callback;
+   self.bytesCount = bytesCount;
+   if (bytesCount < 1 || (self.buffer && self.buffer.length >= bytesCount)) {
+       process.nextTick(function() {
+           callWaitForDataCallback(self);
 	});
+   }
+}
 
-};
+TrackerSimulator.prototype.destroy = function() {
+	this.client.destroy();
+}
 	
