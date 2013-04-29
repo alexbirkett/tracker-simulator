@@ -1,0 +1,26 @@
+{
+    "author": "Alex Birkett <alex@birkett.no>",
+    "name": "tracker-simulator",
+    "description": "Simulates various GPS tracker protocols",
+    "version": "0.0.1",
+    "keywords": ["gps", "tracker", "simulator"],
+    "homepage": "https://github.com/alexbirkett/tracker-simulator",
+    "repository": {
+        "type": "git",
+        "url": "git://github.com/alexbirkett/tracker-simulator.git"
+    },
+    "main": "index.js",
+    "scripts": {
+        "test": "vows "
+    },
+    "engines": {
+        "node": ">=0.10.5"
+    },
+    "dependencies": {
+        "async-foreach": "0.1.x",
+        "smarter-buffer": "0.0.x"
+    },
+    "devDependencies": {
+        "vows": ">= 0.7.0"
+    }
+}
