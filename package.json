@@ -22,5 +22,6 @@
     },
     "devDependencies": {
         "vows": ">= 0.7.0"
-    }
+    },
+    "main": "./tracker-simulator.js"
 }
