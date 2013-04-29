@@ -26,7 +26,6 @@ var createServer = function(port, callback) {
 
 		client.on('data', function(data) {
 			numberOfCallsToData++;
-			console.log(data.toString());
 			buffer = Buffer.smarterConcat([buffer, data]);
 		});
 	
@@ -67,11 +66,11 @@ vows.describe('tracker-simulator').addBatch({
 				trackerSimulator.destroy();
 			});
         },
+        'should not return error': function (err, buffer, numberOfCallsToData, numberOfCallsToEnd) {
+            assert.isNull(err);
+        },
         'buffer should be hello world': function (err, buffer, numberOfCallsToData, numberOfCallsToEnd) {
-          	assert.isNull(err);
           	assert.equal(buffer, "helloworld");
-          	console.log(buffer + '');
-          	console.log('numberOfCallsToData ' + numberOfCallsToData + ' numberOfCallsToEnd ' + numberOfCallsToEnd);
         }
     }
 }).export(module); // Export the Suite

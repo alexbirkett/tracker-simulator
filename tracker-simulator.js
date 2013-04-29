@@ -62,7 +62,7 @@ TrackerSimulator.prototype.connect = function(connectOptions, callback) {
 	this.client.on('data', function(data) {
        self.buffer = Buffer.smarterConcat([self.buffer, data]); 
        if (self.bytesCount && self.buffer.length >= self.bytesCount) {
-          self._callWaitForDataCallback();
+          self._callWaitForDataCallback(null, callback);
        }
     });
 }
@@ -93,7 +93,7 @@ TrackerSimulator.prototype.sendMessage = function(messages, pauseBetweenMessages
 	});
 	};
 	
-TrackerSimulator.prototype._callWaitForDataCallback = function(err) {
+TrackerSimulator.prototype._callWaitForDataCallback = function(err, callback) {
     var buffer = this.buffer;
     this.buffer = undefined;
     var callback = this.dataCallback;
@@ -107,7 +107,7 @@ TrackerSimulator.prototype.waitForData = function(bytesCount, callback) {
    self.bytesCount = bytesCount;
    if (bytesCount < 1 || (self.buffer && self.buffer.length >= bytesCount)) {
        process.nextTick(function() {
-           self._callWaitForDataCallback(self);
+           self._callWaitForDataCallback(null, callback);
 	});
    }
 }
