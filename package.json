@@ -9,7 +9,6 @@
         "type": "git",
         "url": "git://github.com/alexbirkett/tracker-simulator.git"
     },
-    "main": "index.js",
     "scripts": {
         "test": "vows "
     },
