@@ -10,7 +10,7 @@
         "url": "git://github.com/alexbirkett/tracker-simulator.git"
     },
     "scripts": {
-        "test": "vows "
+        "test": "vows --spec"
     },
     "engines": {
         "node": ">=0.10.5"
